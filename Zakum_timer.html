@@ -1,0 +1,813 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>炎魔計時器｜時間魔方</title>
+
+  <!-- （已移除：PWA / iOS 主畫面支援的所有標籤與 icons） -->
+
+  <style>
+    :root{
+      --bg:#0b1220; --card:#121b2f; --text:#e9eefc; --muted:#9fb0d0;
+      --accent:#4f8cff; --good:#25d366; --danger:#ff4d4d;
+      --border: rgba(255,255,255,.12);
+    }
+    body{
+      margin:0;
+      background: radial-gradient(1200px 800px at 20% 0%, #122043, var(--bg));
+      color:var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial;
+      min-height:100vh;
+      padding:20px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+    }
+    .page{ width:min(820px, 100%); }
+    .header{
+      display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+      margin: 0 0 14px;
+    }
+    .header h1{ margin:0; font-size:20px; color:#dbe7ff; letter-spacing:.6px; }
+    .headerRight{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+    .stack{ display:grid; gap:14px; }
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:18px 18px 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.35);
+      backdrop-filter: blur(8px);
+    }
+    .titleRow{
+      display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+      margin:0 0 6px;
+    }
+    .titleRow h2{ margin:0; font-size:16px; color:#dbe7ff; letter-spacing:.3px; }
+    .badge{ font-size:12px; color:rgba(233,238,252,.8); opacity:.85; }
+    .timer{
+      font-variant-numeric: tabular-nums;
+      font-size:72px; font-weight:800; letter-spacing:1px;
+      margin:10px 0 12px;
+    }
+    .sub{ display:flex; gap:10px; flex-wrap:wrap; color:var(--muted); font-size:13px; }
+    .pill{
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding:8px 10px;
+      background: rgba(0,0,0,.18);
+    }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    label{ font-size:13px; color:var(--muted); }
+    input[type="number"], input[type="text"]{
+      padding:10px 10px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.22);
+      color: var(--text);
+      outline:none; max-width: 360px; }
+    input[type="number"]{ width:50px; }
+    input[type="text"]{ width: min(200px, 100%); }
+    input[type="range"]{ width:150px; accent-color: var(--accent); }
+    .volNum{ width:50px !important; }
+    input:focus{ border-color: rgba(79,140,255,.65); }
+    button{
+      border:none; border-radius:12px; padding:10px 12px;
+      background: rgba(255,255,255,.10);
+      color: var(--text);
+      cursor:pointer;
+      font-weight:700;
+      transition: transform .05s ease, background .2s ease, opacity .2s ease;
+    }
+    button:hover{ background: rgba(255,255,255,.14); }
+    button:active{ transform: translateY(1px); }
+    .primary{ background: rgba(79,140,255,.85); }
+    .primary:hover{ background: rgba(79,140,255,.95); }
+    .good{ background: rgba(37,211,102,.82); }
+    .good:hover{ background: rgba(37,211,102,.92); }
+    .danger{ background: rgba(255,77,77,.80); }
+    .danger:hover{ background: rgba(255,77,77,.92); }
+    .toggle{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.18);
+      user-select:none;
+    }
+    .toggle input{ transform: scale(1.1); }
+    .toast{
+      position: fixed;
+      left: 50%;
+      top: 18px;
+      transform: translateX(-50%);
+      min-width: 260px;
+      max-width: min(920px, calc(100vw - 32px));
+      padding: 12px 14px;
+      border-radius: 14px;
+      border:1px solid rgba(255,255,255,.18);
+      background: rgba(18, 27, 47, .92);
+      color: #e9eefc;
+      box-shadow: 0 18px 50px rgba(0,0,0,.35);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .18s ease, transform .18s ease;
+      z-index: 9999;
+      font-weight: 900;
+      letter-spacing: .2px;
+    }
+    .toast.show{ opacity:1; transform: translateX(-50%) translateY(4px); }
+    .toast small{
+      display:block; margin-top:6px;
+      font-weight:650; color: rgba(233,238,252,.78);
+      line-height: 1.35;
+    }
+    .divider{ height:1px; background: rgba(255,255,255,.10); margin:14px 0 10px; border-radius: 1px; }
+    .noteLine{ margin-top:6px; font-size:12px; color: rgba(233,238,252,.70); line-height: 1.35; }
+    .log{
+      margin-top:10px;
+      padding:12px;
+      border-radius:12px;
+      border:1px dashed rgba(255,255,255,.16);
+      background: rgba(0,0,0,.18);
+      min-height:140px;
+      color:#dbe7ff;
+      font-size:13px;
+      line-height:1.45;
+      white-space:pre-wrap;
+    }
+    .btnWide{ width:auto; min-width: 220px; max-width: 320px; justify-content:center; }
+    .btnWide{ display:inline-flex; }
+    .btnWideWrap{ display:flex; justify-content:flex-start; }
+  </style>
+</head>
+<body>
+  <div class="toast" id="toast"></div>
+  <div class="page">
+    <div class="header">
+      <h1>炎魔計時器</h1>
+      <div class="headerRight">
+        <button class="primary" id="miniModeBtn">小窗模式</button>
+        <button class="primary" id="restoreDefaultsBtn">恢復預設值</button>
+      </div>
+    </div>
+
+    <!-- ===================== Timer A ===================== -->
+    <section class="stack" id="timerA">
+      <div class="card">
+        <div class="titleRow">
+          <h2>Timer A｜時間魔方計時器</h2>
+          <div class="badge">到提醒時點，發出語音提醒；時間歸零後自動刷新</div>
+        </div>
+        <div data-a="display" class="timer">02:30</div>
+        <div class="sub">
+          <div class="pill">狀態：<b data-a="state">待機</b></div>
+          <div class="pill">循環時間：<b data-a="cycleLabel">02:30</b></div>
+          <div class="pill">提前通知：<b data-a="leadLabel">開（提前 10 秒）</b></div>
+        </div>
+        <div class="row" style="margin-top:14px">
+          <button class="primary bigBtn" data-a="startBtn">開始</button>
+          <button class="danger bigBtn" data-a="resetBtn">停止</button>
+          <button class="good bigBtn" data-a="recalcBtn">刷新</button>
+        </div>
+        <div class="noteLine">1.設定提醒內容、提前提醒秒數後，點擊「套用全部設定」。</div>
+        <div class="noteLine">2.點擊右上角「小窗模式」，可於遊戲畫面上顯示小型計時器。</div>
+        <div class="noteLine">3.當投入火眼、炎魔出現時，點擊「開始」按鈕。</div>
+        <div class="noteLine">4.若時間有誤差，當下次時間魔方出現時，點擊「刷新」按鈕。</div>
+      </div>
+
+      <div class="card">
+        <div class="titleRow">
+          <h2>Timer A｜設定</h2>
+          <div class="badge">一鍵套用全部設定</div>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <label>循環時間</label>
+          <input type="number" data-a="cycleMin" value="2" min="0" step="1" />
+          <label>分</label>
+          <input type="number" data-a="cycleSec" value="30" min="0" max="59" step="1" />
+          <label>秒</label>
+        </div>
+        <div class="row" style="margin-top:14px">
+          <label>提醒內容</label>
+          <input type="text" data-a="mainText" value="魔方倒數!" />
+        </div>
+        <div class="row" style="margin-top:14px">
+          <div class="toggle">
+            <input type="checkbox" data-a="leadEnabled" checked />
+            <label style="color:#dbe7ff">啟用提前通知</label>
+          </div>
+          <label>提前</label>
+          <input type="number" data-a="leadSeconds" value="10" min="0" step="1" />
+          <label>秒</label>
+        </div>
+        <div class="row btnWideWrap" style="margin-top:14px">
+          <button class="primary btnWide" data-a="applyAllBtn">✅ 套用全部設定</button>
+        </div>
+      </div>
+
+      <section class="stack" id="globalSettings" style="margin: 0 0 14px">
+        <div class="card">
+          <div class="titleRow">
+            <h2>Timer A｜語音</h2>
+            <div class="badge">提醒通知語音設定</div>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <button id="globalTestVoiceBtn">🔊 測試語音</button>
+            <label>音量</label>
+            <input type="range" id="globalVolRange" min="0" max="100" step="1" value="100" />
+            <input class="volNum" type="number" id="globalVolNum" min="0" max="100" step="1" value="100" />
+          </div>
+          <div class="row" style="margin-top:10px">
+            <label>語速</label>
+            <input type="number" id="globalVoiceRate" value="1.10" min="0.6" max="1.6" step="0.05" />
+            <label>音高</label>
+            <input type="number" id="globalVoicePitch" value="1.00" min="0.6" max="1.6" step="0.05" />
+          </div>
+        </div>
+      </section>
+
+      <div class="card">
+        <div class="titleRow">
+          <h2>Timer A｜訊息</h2>
+          <div class="badge">最近 10 筆</div>
+        </div>
+        <div class="log" id="logA"></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // -------------------- Toast --------------------
+    const toast = document.getElementById('toast');
+    let toastTimer = null;
+    function showToast(title, sub=''){
+      toast.innerHTML = `${title}${sub ? `<small>${sub}</small>` : ''}`;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2400);
+      // Mini window toast (if any)
+      try{
+        if (miniWin && !miniWin.closed){
+          const mt = miniWin.document.getElementById('miniToast');
+          if (mt){
+            mt.innerHTML = `${title}${sub ? `<small>${sub}</small>` : ''}`;
+            mt.classList.add('show');
+            clearTimeout(miniToastTimer);
+            miniToastTimer = setTimeout(() => { try{ mt.classList.remove('show'); }catch(e){} }, 2400);
+          }
+        }
+      }catch(e){}
+    }
+
+    // -------------------- Logs --------------------
+    const MAX_LOGS = 10;
+    const logAEl = document.getElementById('logA');
+    const logBuffer = new WeakMap();
+    function pushLog(el, msg){
+      const t = new Date().toLocaleTimeString();
+      const line = `[${t}] ${msg}`;
+      const arr = logBuffer.get(el) || [];
+      arr.unshift(line);
+      if (arr.length > MAX_LOGS) arr.length = MAX_LOGS;
+      logBuffer.set(el, arr);
+      el.textContent = arr.join('\n');
+    }
+    pushLog(logAEl, '載入完成。');
+
+    // -------------------- Utils --------------------
+    const pad2 = (n) => String(n).padStart(2,'0');
+    const fmtFloor = (sec) => {
+      sec = Math.max(0, Math.floor(sec));
+      const m = Math.floor(sec/60), s = sec%60;
+      return `${pad2(m)}:${pad2(s)}`;
+    };
+    const fmtCountdown = (sec) => {
+      sec = Math.max(0, sec);
+      const rounded = (sec > 0) ? Math.ceil(sec) : 0;
+      const m = Math.floor(rounded/60), s = rounded%60;
+      return `${pad2(m)}:${pad2(s)}`;
+    };
+    const now = () => performance.now();
+
+    // -------------------- Storage keys --------------------
+    // 保留與舊版相容：Timer A v2 & Global voice v1
+    const KEY_TIMER_A = 'yanmo_newtool_timerA_cycle_settings_v1';
+    const KEY_GLOBAL_VOICE = 'yanmo_newtool_global_voice_settings_v1';
+
+    // -------------------- TTS --------------------
+    let selectedVoice = null;
+    function pickChineseVoice(){
+      const voices = window.speechSynthesis?.getVoices?.() || [];
+      if (!voices.length) return null;
+      let v = voices.find(v => (v.lang||'').toLowerCase() === 'zh-tw');
+      if (v) return v;
+      v = voices.find(v => (v.lang||'').toLowerCase().startsWith('zh'));
+      if (v) return v;
+      return voices[0] || null;
+    }
+    function initVoices(){
+      if (!window.speechSynthesis) return;
+      selectedVoice = pickChineseVoice();
+      window.speechSynthesis.onvoiceschanged = () => { selectedVoice = pickChineseVoice(); };
+    }
+    initVoices();
+
+    // ===== Mobile Safari/Chrome 兼容：語音引擎預熱 & voices 載入等待 =====
+    let speechPrimed = false;
+    let voicesReady = false;
+    let voicesReadyPromise = null;
+    function ensureVoicesReady(timeoutMs = 2000){
+      if (!window.speechSynthesis) return Promise.resolve(false);
+      if (voicesReady) return Promise.resolve(true);
+      if (voicesReadyPromise) return voicesReadyPromise;
+      voicesReadyPromise = new Promise(resolve => {
+        const synth = window.speechSynthesis;
+        const start = Date.now();
+        const check = () => {
+          try {
+            const vs = synth.getVoices?.() || [];
+            if (vs.length){
+              voicesReady = true;
+              try { selectedVoice = pickChineseVoice(); } catch(e) {}
+              cleanup();
+              return resolve(true);
+            }
+          } catch(e) {}
+          if (Date.now() - start >= timeoutMs){
+            cleanup();
+            return resolve(false);
+          }
+          setTimeout(check, 120);
+        };
+        const onChanged = () => {
+          try {
+            const vs = synth.getVoices?.() || [];
+            if (vs.length){
+              voicesReady = true;
+              try { selectedVoice = pickChineseVoice(); } catch(e) {}
+              cleanup();
+              return resolve(true);
+            }
+          } catch(e) {}
+        };
+        function cleanup(){
+          try { synth.removeEventListener('voiceschanged', onChanged); } catch(e) {}
+          voicesReadyPromise = null;
+        }
+        try { synth.addEventListener('voiceschanged', onChanged); } catch(e) {}
+        try { synth.getVoices?.(); } catch(e) {}
+        check();
+      });
+      return voicesReadyPromise;
+    }
+    async function primeSpeech(){
+      if (speechPrimed) return true;
+      if (!window.speechSynthesis) return false;
+      try {
+        await ensureVoicesReady(2500);
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance('');
+        u.lang = 'zh-TW';
+        u.volume = 0; // 靜音預熱
+        u.rate = 1;
+        u.pitch = 1;
+        window.speechSynthesis.speak(u);
+        speechPrimed = true;
+        return true;
+      } catch(e){
+        return false;
+      }
+    }
+    function speak(text){
+      const t = (text||'').trim();
+      if (!t) return;
+      const conf = window.__YANMO_VOICE__ || { rate:1.1, pitch:1.0, volume:100 };
+      if (!window.speechSynthesis){
+        showToast('此瀏覽器不支援語音朗讀', '建議使用 Chrome/Edge');
+        return;
+      }
+      try{
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(t);
+        u.lang = 'zh-TW';
+        const r = Number(conf.rate), p = Number(conf.pitch), v = Number(conf.volume);
+        u.rate = Number.isFinite(r) ? Math.min(1.6, Math.max(0.6, r)) : 1.1;
+        u.pitch = Number.isFinite(p) ? Math.min(1.6, Math.max(0.6, p)) : 1.0;
+        u.volume = Number.isFinite(v) ? Math.min(1, Math.max(0, v/100)) : 1.0;
+        if (selectedVoice) u.voice = selectedVoice;
+        window.speechSynthesis.speak(u);
+      }catch(e){}
+    }
+
+    // -------------------- Global Voice Settings --------------------
+    const gvRateEl = document.getElementById('globalVoiceRate');
+    const gvPitchEl = document.getElementById('globalVoicePitch');
+    const gvVolRangeEl = document.getElementById('globalVolRange');
+    const gvVolNumEl = document.getElementById('globalVolNum');
+    const gvTestBtn = document.getElementById('globalTestVoiceBtn');
+    function clampVol100(v){ v = Number(v); if (!Number.isFinite(v)) return 100; return Math.min(100, Math.max(0, Math.round(v))); }
+    function clampRatePitch(v){ v = Number(v); if (!Number.isFinite(v)) return null; return Math.min(1.6, Math.max(0.6, v)); }
+    function saveGlobalVoice(){
+      try{
+        const payload = {
+          rate: clampRatePitch(gvRateEl?.value) ?? 1.1,
+          pitch: clampRatePitch(gvPitchEl?.value) ?? 1.0,
+          volume: clampVol100(gvVolNumEl?.value ?? gvVolRangeEl?.value)
+        };
+        localStorage.setItem(KEY_GLOBAL_VOICE, JSON.stringify(payload));
+      }catch(e){}
+    }
+    function applyGlobalVoice(payload, save=false){
+      const rate = Number.isFinite(payload?.rate) ? Math.min(1.6, Math.max(0.6, payload.rate)) : 1.1;
+      const pitch = Number.isFinite(payload?.pitch) ? Math.min(1.6, Math.max(0.6, payload.pitch)) : 1.0;
+      const vol = clampVol100(payload?.volume);
+      if (gvRateEl) gvRateEl.value = String(rate);
+      if (gvPitchEl) gvPitchEl.value = String(pitch);
+      if (gvVolRangeEl) gvVolRangeEl.value = String(vol);
+      if (gvVolNumEl) gvVolNumEl.value = String(vol);
+      window.__YANMO_VOICE__ = { rate, pitch, volume: vol };
+      if (save) saveGlobalVoice();
+    }
+    (function(){
+      let payload = null;
+      try{
+        const raw = localStorage.getItem(KEY_GLOBAL_VOICE);
+        if (raw) payload = JSON.parse(raw);
+      }catch(e){}
+      applyGlobalVoice(payload || { rate:1.1, pitch:1.0, volume:100 }, false);
+    })();
+    function syncVol(from){
+      const v = clampVol100(from);
+      if (gvVolRangeEl) gvVolRangeEl.value = String(v);
+      if (gvVolNumEl) gvVolNumEl.value = String(v);
+      window.__YANMO_VOICE__ = {
+        rate: clampRatePitch(gvRateEl?.value) ?? 1.1,
+        pitch: clampRatePitch(gvPitchEl?.value) ?? 1.0,
+        volume: v
+      };
+      saveGlobalVoice();
+    }
+    if (gvVolRangeEl){
+      gvVolRangeEl.addEventListener('input', () => syncVol(gvVolRangeEl.value));
+      gvVolRangeEl.addEventListener('change', () => syncVol(gvVolRangeEl.value));
+    }
+    if (gvVolNumEl){
+      gvVolNumEl.addEventListener('input', () => syncVol(gvVolNumEl.value));
+      gvVolNumEl.addEventListener('change', () => syncVol(gvVolNumEl.value));
+    }
+    [gvRateEl, gvPitchEl].forEach(el => {
+      if (!el) return;
+      el.addEventListener('change', () => applyGlobalVoice({
+        rate: clampRatePitch(gvRateEl?.value) ?? 1.1,
+        pitch: clampRatePitch(gvPitchEl?.value) ?? 1.0,
+        volume: clampVol100(gvVolNumEl?.value ?? gvVolRangeEl?.value)
+      }, true));
+    });
+    if (gvTestBtn){
+      gvTestBtn.addEventListener('click', async () => {
+        initVoices();
+        await primeSpeech();
+        const mainTextEl = document.querySelector('[data-a="mainText"]');
+        const text = (mainTextEl?.value || '').trim() || '魔方倒數!';
+        showToast('🔊 測試語音', text);
+        pushLog(logAEl, '執行全域語音測試');
+        speak(text, { userGesture: true });
+      });
+    }
+
+    // -------------------- Restore defaults --------------------
+    document.getElementById('restoreDefaultsBtn').addEventListener('click', () => {
+      try{
+        localStorage.removeItem(KEY_TIMER_A);
+        localStorage.removeItem(KEY_GLOBAL_VOICE);
+      }catch(e){}
+      showToast('✅ 已恢復預設值', '即將重新載入...');
+      setTimeout(() => location.reload(), 350);
+    });
+
+    // -------------------- API (for mini window) --------------------
+    const API = { timerA: null };
+    window.__YANMO_API = API;
+
+    // -------------------- Mini window (Document PiP) --------------------
+    let miniWin = null;
+    let miniUpdateTimer = null;
+    let miniToastTimer = null;
+    function isDocPiPSupported(){
+      return !!window.documentPictureInPicture && typeof window.documentPictureInPicture.requestWindow === 'function';
+    }
+    function stopMiniUpdater(){
+      if (miniUpdateTimer){ clearInterval(miniUpdateTimer); miniUpdateTimer = null; }
+    }
+    function closeMiniWindow(){
+      stopMiniUpdater();
+      if (miniToastTimer){ clearTimeout(miniToastTimer); miniToastTimer = null; }
+      try{ miniWin?.close?.(); }catch(e){}
+      miniWin = null;
+      document.getElementById('miniModeBtn').textContent = '小窗模式';
+    }
+    async function openMiniWindow(){
+      if (!API.timerA){
+        showToast('⚠️ 尚未初始化完成', '請稍後再試一次');
+        return;
+      }
+      if (miniWin && !miniWin.closed){
+        closeMiniWindow();
+        return;
+      }
+      if (!isDocPiPSupported()){
+        showToast('此瀏覽器不支援小窗置頂', '請用 Chrome/Edge 桌面版');
+        pushLog(logAEl, '⚠️ 小窗模式啟動失敗：不支援 documentPictureInPicture');
+        return;
+      }
+      try{
+        miniWin = await window.documentPictureInPicture.requestWindow({ width: 360, height: 170 });
+        document.getElementById('miniModeBtn').textContent = '關閉小窗';
+      }catch(e){
+        showToast('小窗模式啟動失敗', '請確認瀏覽器允許（需使用者點擊觸發）');
+        return;
+      }
+      const d = miniWin.document;
+      d.title = '炎魔計時器｜小窗（Timer A）';
+      d.body.style.margin = '0';
+      d.body.style.background = '#0b1220';
+      d.body.style.color = '#e9eefc';
+      d.body.style.fontFamily = 'system-ui, -apple-system, Segoe UI, Arial';
+      d.body.style.userSelect = 'none';
+      const style = d.createElement('style');
+      style.textContent = `
+      .wrap{ padding:10px; display:grid; gap:10px; }
+      .card{ border:1px solid rgba(255,255,255,.14); background: rgba(18,27,47,.82); border-radius:12px; padding:10px; }
+      .row{ display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+      .title{ font-size:12px; opacity:.9; font-weight:900; letter-spacing:.2px; }
+      .time{ font-variant-numeric: tabular-nums; font-size:34px; font-weight:950; letter-spacing:1px; }
+      .btns{ display:flex; gap:6px; flex-wrap:wrap; }
+      button{ border:none; border-radius:10px; padding:8px 10px; background: rgba(255,255,255,.10); color:#e9eefc; font-weight:900; cursor:pointer; }
+      button:hover{ background: rgba(255,255,255,.14); }
+      .good{ background: rgba(37,211,102,.75); }
+      .good:hover{ background: rgba(37,211,102,.86); }
+      .danger{ background: rgba(255,77,77,.75); }
+      .danger:hover{ background: rgba(255,77,77,.86); }
+      .primary{ background: rgba(79,140,255,.80); }
+      .primary:hover{ background: rgba(79,140,255,.92); }
+      .hint{ font-size:11px; opacity:.75; margin-top:4px; line-height:1.2; }
+      .toast{ position:fixed; left:50%; top:10px; transform:translateX(-50%);
+        min-width: 220px; max-width: calc(100vw - 20px);
+        padding:10px 12px; border-radius:12px;
+        border:1px solid rgba(255,255,255,.18);
+        background: rgba(18,27,47,.92);
+        color:#e9eefc; box-shadow:0 14px 40px rgba(0,0,0,.35);
+        opacity:0; pointer-events:none;
+        transition: opacity .18s ease, transform .18s ease;
+        font-weight:950; letter-spacing:.2px; z-index:9999;
+      }
+      .toast.show{ opacity:1; transform:translateX(-50%) translateY(4px); }
+      .toast small{ display:block; margin-top:4px; font-weight:700; color:rgba(233,238,252,.78); line-height:1.25; }
+      `;
+      d.head.appendChild(style);
+      const wrap = d.createElement('div');
+      wrap.className = 'wrap';
+      const cardA = d.createElement('div');
+      cardA.className = 'card';
+      cardA.innerHTML = `
+        <div class="row">
+          <div class="title">A｜時間魔方</div>
+          <div class="time" id="timeA">00:00</div>
+        </div>
+        <div class="row">
+          <div class="btns">
+            <button class="primary" id="aStart">開始</button>
+            <button class="primary" id="aCalib">刷新</button>
+            <button class="danger" id="aReset">停止</button>
+          </div>
+        </div>
+        <div class="hint" id="hintA"></div>
+      `;
+      wrap.appendChild(cardA);
+      d.body.appendChild(wrap);
+      const miniToast = d.createElement('div');
+      miniToast.className = 'toast';
+      miniToast.id = 'miniToast';
+      d.body.appendChild(miniToast);
+      d.getElementById('aStart').addEventListener('click', () => API.timerA.start());
+      d.getElementById('aCalib').addEventListener('click', () => API.timerA.calibrate());
+      d.getElementById('aReset').addEventListener('click', () => API.timerA.reset());
+      miniWin.addEventListener('pagehide', () => closeMiniWindow());
+      stopMiniUpdater();
+      miniUpdateTimer = setInterval(() => {
+        if (!miniWin || miniWin.closed){ closeMiniWindow(); return; }
+        try{
+          miniWin.document.getElementById('timeA').textContent = fmtCountdown(API.timerA.getRemaining());
+          miniWin.document.getElementById('hintA').textContent = API.timerA.getStateLabel();
+        }catch(e){}
+      }, 200);
+    }
+    document.getElementById('miniModeBtn').addEventListener('click', openMiniWindow);
+
+    // -------------------- Timer A (cycle) --------------------
+    (function initTimerA(){
+      const root = document.getElementById('timerA');
+      const $ = (key) => {
+        const el = root.querySelector(`[data-a="${key}"]`);
+        if (!el) throw new Error(`Timer A 缺少 data-a="${key}" 元素`);
+        return el;
+      };
+      const display = $('display');
+      const stateEl = $('state');
+      const cycleLabel = $('cycleLabel');
+      const leadLabel = $('leadLabel');
+      const startBtn = $('startBtn');
+      const resetBtn = $('resetBtn');
+      const recalcBtn = $('recalcBtn');
+      const cycleMin = $('cycleMin');
+      const cycleSec = $('cycleSec');
+      const mainTextInput = $('mainText');
+      const leadEnabled = $('leadEnabled');
+      const leadSecondsInput = $('leadSeconds');
+      const applyAllBtn = $('applyAllBtn');
+
+      const save = (obj) => { try{ localStorage.setItem(KEY_TIMER_A, JSON.stringify(obj)); }catch(e){} };
+      const load = () => { try{ const r = localStorage.getItem(KEY_TIMER_A); return r ? JSON.parse(r) : null; }catch(e){ return null; } };
+
+      // Defaults (02:30)
+      let cycleSeconds = 2*60 + 30;
+      let mainText = '魔方倒數!';
+      let leadOn = true;
+      let leadSeconds = 10;
+      let running = false;
+      let endAt = null;
+      let pausedRemaining = cycleSeconds;
+      let firedThisCycle = false;
+      let lastRemaining = null;
+
+      const setState = (s) => stateEl.textContent = s;
+
+      function normalize(){
+        cycleSeconds = Math.max(1, Math.floor(cycleSeconds));
+        leadSeconds = Math.max(0, Math.floor(leadSeconds));
+        if (cycleSeconds > 1 && leadSeconds >= cycleSeconds){
+          leadSeconds = cycleSeconds - 1;
+          leadSecondsInput.value = leadSeconds;
+          pushLog(logAEl, `提前秒數過大，已自動調整為 ${leadSeconds} 秒（循環時間 - 1 秒）`);
+        }
+      }
+      function updateLabels(){
+        cycleLabel.textContent = fmtFloor(cycleSeconds);
+        leadLabel.textContent = leadOn ? `開（提前 ${leadSeconds} 秒）` : '關';
+      }
+      function getRemaining(){
+        const t = now();
+        if (running && endAt) return Math.max(0, (endAt - t)/1000);
+        return pausedRemaining;
+      }
+      function render(){
+        display.textContent = fmtCountdown(getRemaining());
+        updateLabels();
+      }
+      function saveAll(){
+        save({ cycleSeconds, mainText, leadOn, leadSeconds });
+      }
+      function resetFlags(){
+        firedThisCycle = false;
+        lastRemaining = cycleSeconds + 0.5;
+      }
+      function applyAllSettings(){
+        const cm = Math.max(0, parseInt(cycleMin.value || '0', 10));
+        const csRaw = parseInt(cycleSec.value || '0', 10);
+        const cs = Math.min(59, Math.max(0, isNaN(csRaw) ? 0 : csRaw));
+        cycleSec.value = cs;
+        cycleSeconds = Math.max(1, cm*60 + cs);
+        mainText = (mainTextInput.value || '').trim() || '魔方倒數!';
+        mainTextInput.value = mainText;
+        leadOn = !!leadEnabled.checked;
+        leadSeconds = Math.max(0, parseInt(leadSecondsInput.value || '0', 10));
+        normalize();
+        if (!running) pausedRemaining = cycleSeconds;
+        firedThisCycle = false;
+        lastRemaining = null;
+        saveAll();
+        showToast('✅ Timer A 已套用設定', `循環 ${fmtFloor(cycleSeconds)}｜提前 ${leadOn ? (leadSeconds+'秒') : '關'}`);
+        pushLog(logAEl, '✅ 已套用設定');
+        render();
+      }
+      function start(){
+        if (running) return;
+        const t = now();
+        running = true;
+        endAt = t + pausedRemaining*1000;
+        resetFlags();
+        setState('進行中');
+        pushLog(logAEl, '開始循環 ✅');
+      }
+      function reset(){
+        running = false;
+        endAt = null;
+        pausedRemaining = cycleSeconds;
+        resetFlags();
+        setState('待機');
+        pushLog(logAEl, '已重置 ✅');
+        render();
+      }
+      function recalc(){
+        const t = now();
+        pausedRemaining = cycleSeconds;
+        resetFlags();
+        if (running){
+          endAt = t + cycleSeconds*1000;
+          setState('進行中');
+          pushLog(logAEl, '刷新：已重設本輪並繼續 ✅');
+        }else{
+          endAt = null;
+          setState('待機');
+          pushLog(logAEl, '刷新：已重設本輪（尚未開始）');
+        }
+        render();
+      }
+      function calibrate(){ recalc(); }
+
+      startBtn.addEventListener('click', async () => { await primeSpeech(); start(); });
+      resetBtn.addEventListener('click', reset);
+      recalcBtn.addEventListener('click', calibrate);
+      applyAllBtn.addEventListener('click', applyAllSettings);
+      [cycleMin, cycleSec, mainTextInput, leadSecondsInput].forEach(el => {
+        el.addEventListener('keydown', (e) => { if (e.key === 'Enter') applyAllSettings(); });
+      });
+      leadEnabled.addEventListener('change', () => {
+        leadOn = !!leadEnabled.checked;
+        updateLabels();
+        saveAll();
+      });
+
+      const saved = load();
+      if (saved){
+        if (Number.isFinite(saved.cycleSeconds)) cycleSeconds = Math.max(1, Math.floor(saved.cycleSeconds));
+        if (typeof saved.mainText === 'string') mainText = saved.mainText.trim() || mainText;
+        if (typeof saved.leadOn === 'boolean') leadOn = saved.leadOn;
+        if (Number.isFinite(saved.leadSeconds)) leadSeconds = Math.max(0, Math.floor(saved.leadSeconds));
+      }
+      normalize();
+
+      cycleMin.value = Math.floor(cycleSeconds/60);
+      cycleSec.value = cycleSeconds%60;
+      mainTextInput.value = mainText;
+      leadEnabled.checked = leadOn;
+      leadSecondsInput.value = leadSeconds;
+      pausedRemaining = cycleSeconds;
+      setState('待機');
+      resetFlags();
+      render();
+
+      API.timerA = {
+        getRemaining,
+        start,
+        reset,
+        recalc,
+        calibrate,
+        getStateLabel: () => `${stateEl.textContent}｜提前:${leadOn ? (leadSeconds+'s') : '關'}`
+      };
+
+      function tick(){
+        const t = now();
+        if (running && endAt){
+          const remaining = Math.max(0, (endAt - t)/1000);
+          const trigger = (leadOn ? leadSeconds : null);
+          if (!firedThisCycle && trigger !== null){
+            if (trigger === 0){
+              if (remaining <= 0.02){
+                firedThisCycle = true;
+                speak(mainText, { userGesture: false });
+                showToast('⏱️ 提醒通知', mainText);
+                pushLog(logAEl, `提醒：${mainText} \n 時間 00:00`);
+              }
+            }else{
+              if (lastRemaining != null && lastRemaining > trigger && remaining <= trigger){
+                firedThisCycle = true;
+                speak(mainText, { userGesture: false });
+                showToast('⏱️ 提醒通知', mainText);
+                pushLog(logAEl, `提醒：${mainText} \n（提前 ${trigger} 秒）`);
+              }
+            }
+          }
+          if (t >= endAt){
+            endAt = t + cycleSeconds*1000;
+            pausedRemaining = cycleSeconds;
+            resetFlags();
+            setState('進行中');
+            updateLabels();
+          }
+          lastRemaining = remaining;
+        }
+        render();
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    })();
+  });
+  </script>
+
+  <!-- （已移除：註冊 Service Worker 的 <script> 區塊） -->
+</body>
+</html>
